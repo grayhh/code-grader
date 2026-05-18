@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>채점 대시보드</title>
+<style>
+:root {
+  --bg: #f1f5f9; --card: #ffffff; --border: #e2e8f0;
+  --text: #1e293b; --text-light: #64748b; --text-muted: #94a3b8;
+  --primary: #2563eb; --primary-hover: #1d4ed8; --primary-light: #dbeafe;
+  --success: #16a34a; --success-bg: #dcfce7;
+  --danger: #dc2626; --danger-bg: #fee2e2;
+  --warning: #d97706; --warning-bg: #fef3c7;
+  --nav-bg: #0f172a; --nav-text: #f1f5f9;
+  --radius: 12px; --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+/* Navbar */
+.navbar { background: var(--nav-bg); color: var(--nav-text); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+.navbar h1 { font-size: 18px; font-weight: 700; }
+.navbar .badge { background: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 12px; }
+
+/* Layout */
+.container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+.section { margin-bottom: 32px; }
+.section-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+/* Hero (only when no results) */
+.hero {
+  text-align: center; padding: 48px 24px 32px;
+}
+.hero h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.hero p { color: var(--text-light); font-size: 15px; max-width: 500px; margin: 0 auto; }
+
+/* Divider */
+.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+/* Upload cards */
+.upload-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.upload-card {
+  background: var(--card); border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 20px; text-align: center; cursor: pointer; transition: all .2s;
+  position: relative;
+}
+.upload-card:hover { border-color: var(--primary); background: var(--primary-light); }
+.upload-card.ready { border-color: var(--success); border-style: solid; }
+.upload-card .card-icon { font-size: 28px; margin-bottom: 6px; }
+.upload-card .card-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.upload-card .card-desc { font-size: 12px; color: var(--text-light); margin-bottom: 6px; }
+.upload-card .card-status { font-size: 11px; margin-top: 4px; padding: 3px 10px; border-radius: 10px; display: inline-block; font-weight: 600; }
+.upload-card .card-status.ok { background: var(--success-bg); color: var(--success); }
+.upload-card .card-status.empty { background: var(--danger-bg); color: var(--danger); }
+.upload-card input[type="file"] { display: none; }
+.upload-card .card-clear {
+  position: absolute; top: 6px; right: 6px;
+  width: 22px; height: 22px; border: none; border-radius: 50%;
+  background: rgba(220,38,38,0.1); color: var(--danger);
+  font-size: 14px; line-height: 1; cursor: pointer; opacity: 0;
+  transition: opacity .15s, background .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.upload-card.ready:hover .card-clear { opacity: 1; }
+.upload-card .card-clear:hover { background: var(--danger); color: #fff; }
+
+/* Reset bar (right-aligned subtle button) */
+.reset-bar { display: flex; justify-content: flex-end; margin-top: 10px; }
+.btn-reset {
+  background: transparent; color: var(--text-light);
+  border: 1px solid var(--border); padding: 6px 14px;
+  border-radius: 6px; font-size: 13px; cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-reset:hover { background: var(--danger-bg); color: var(--danger); border-color: var(--danger); }
+
+/* File guide table */
+.file-guide {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; margin-top: 16px; box-shadow: var(--shadow);
+}
+.file-guide table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.file-guide th { background: #f8fafc; padding: 10px 16px; text-align: left; font-weight: 600; color: var(--text-light); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+.file-guide td { padding: 10px 16px; border-top: 1px solid var(--border); vertical-align: top; }
+.file-guide .fname { font-weight: 600; font-family: 'Fira Code', 'Consolas', monospace; color: var(--primary); font-size: 13px; }
+.file-guide .fdesc { color: var(--text); }
+.file-guide .fformat { color: var(--text-light); font-size: 12px; }
+.file-guide tr.main-row:hover td { background: #f8fafc; }
+.file-guide tr.help-row td { background: #fafbfc; padding: 0; border-top: 1px solid var(--border); }
+.file-guide tr.help-row.open td { padding: 16px 22px 18px; }
+.file-guide .dl-link {
+  font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 500;
+  padding: 2px 8px; border: 1px solid var(--primary-light); border-radius: 6px; background: #fff;
+  white-space: nowrap;
+}
+.file-guide .dl-link:hover { background: var(--primary-light); }
+.file-guide .help-toggle {
+  display: inline-block;
+  font-size: 12px; color: var(--text-light); background: transparent;
+  border: 1px solid var(--border); padding: 2px 8px; border-radius: 6px;
+  cursor: pointer; font-weight: 500; margin-left: 4px;
+  white-space: nowrap; transition: all .15s;
+}
+.file-guide .help-toggle:hover { color: var(--primary); border-color: var(--primary); background: #fff; }
+.file-guide .help-toggle.open { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+.file-guide .actions { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+
+/* 작성 요령 펼침 영역 */
+.help-content { font-size: 13px; line-height: 1.7; color: var(--text); }
+.help-content h4 {
+  font-size: 14px; font-weight: 700; margin-bottom: 8px;
+  color: var(--text); display: flex; align-items: center; gap: 6px;
+}
+.help-content .help-grid {
+  display: grid; grid-template-columns: minmax(280px, 1.2fr) 1fr; gap: 18px;
+  align-items: start;
+}
+@media (max-width: 768px) { .help-content .help-grid { grid-template-columns: 1fr; } }
+.help-content pre {
+  background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 8px;
+  font-family: 'Fira Code','Consolas','Monaco',monospace; font-size: 12px;
+  line-height: 1.55; overflow-x: auto; margin: 0; white-space: pre;
+}
+.help-content .help-block { margin-top: 0; }
+.help-content .help-block + .help-block { margin-top: 12px; }
+.help-content .help-label {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+}
+.help-content ul { list-style: none; padding-left: 0; margin: 0; }
+.help-content ul li {
+  padding: 2px 0; padding-left: 20px; position: relative;
+  font-size: 13px; line-height: 1.6;
+}
+.help-content ul.do li::before    { content: "✓"; position: absolute; left: 0; color: var(--success); font-weight: 700; }
+.help-content ul.dont li::before  { content: "✕"; position: absolute; left: 0; color: var(--danger); font-weight: 700; }
+.help-content ul.note li::before  { content: "•"; position: absolute; left: 4px; color: var(--text-muted); }
+.help-content code {
+  background: #eef2f7; padding: 1px 6px; border-radius: 4px;
+  font-family: 'Fira Code','Consolas','Monaco',monospace; font-size: 12px;
+  color: var(--text);
+}
+.help-content strong { color: var(--text); }
+.help-content .highlight {
+  background: var(--warning-bg); border-left: 3px solid var(--warning);
+  padding: 8px 12px; border-radius: 6px; margin-top: 8px;
+  font-size: 12.5px; color: #78350f;
+}
+
+/* Sample download bar */
+.sample-bar {
+  margin-top: 12px; padding: 10px 14px; background: #f8fafc;
+  border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; color: var(--text-light);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.sample-bar .label { font-weight: 600; color: var(--text); }
+.sample-bar a {
+  color: var(--primary); text-decoration: none; font-weight: 500;
+  padding: 3px 10px; border: 1px solid var(--primary-light); border-radius: 6px; background: #fff;
+}
+.sample-bar a:hover { background: var(--primary-light); }
+.sample-bar .sep { color: var(--text-muted); }
+
+/* Google Sheet input */
+.sheet-row { display: flex; gap: 12px; align-items: center; margin-top: 20px; }
+.sheet-row label { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.sheet-row input {
+  flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 14px; outline: none; transition: border .2s;
+}
+.sheet-row input:focus { border-color: var(--primary); }
+.sheet-row .optional { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+/* Buttons */
+.btn {
+  padding: 12px 28px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary:disabled { background: var(--text-muted); cursor: not-allowed; }
+.btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+.btn-outline:hover { background: var(--primary-light); }
+
+.action-bar { display: flex; gap: 12px; align-items: center; margin-top: 24px; }
+
+/* Progress area */
+.progress-area {
+  background: var(--nav-bg); color: #e2e8f0; border-radius: var(--radius);
+  padding: 16px 20px; max-height: 400px; overflow-y: auto; font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px; line-height: 1.8; display: none;
+}
+.progress-area .line { padding: 2px 0; word-break: break-all; }
+.progress-area .line-tool { color: #a78bfa; }
+.progress-area .line-status { color: #38bdf8; }
+.progress-area .line-error { color: #f87171; }
+.progress-area .line-ok { color: #4ade80; }
+
+/* Spinner */
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Done card (shown when grading completes) */
+.done-card {
+  display: none;
+  margin-top: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--success-bg), #ecfdf5);
+  border: 1px solid var(--success);
+  border-radius: var(--radius);
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.done-card.show { display: flex; }
+.done-card .done-text { font-size: 15px; color: var(--success); font-weight: 600; }
+.done-card .done-text small { display: block; font-weight: 400; color: var(--text-light); margin-top: 2px; }
+.done-card .btn-primary { background: var(--success); }
+.done-card .btn-primary:hover { background: #15803d; }
+
+/* Inline section action button */
+.section-actions {
+  display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.section-actions .btn { padding: 8px 18px; font-size: 14px; }
+
+/* Code Runner */
+.runner-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.runner-select {
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: #fff; font-size: 14px; min-width: 200px; cursor: pointer; color: var(--text);
+}
+.runner-select:focus { outline: none; border-color: var(--primary); }
+.runner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 768px) { .runner-grid { grid-template-columns: 1fr; } }
+.runner-pane {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px; box-shadow: var(--shadow);
+}
+.runner-label {
+  font-size: 12px; color: var(--text-light); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.runner-hint {
+  font-size: 11px; color: var(--text-muted); font-weight: 400;
+  text-transform: none; letter-spacing: 0; margin-left: 6px;
+}
+.runner-code, .runner-input {
+  width: 100%; font-family: 'Fira Code', 'Consolas', 'Monaco', monospace; font-size: 13px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px;
+  outline: none; resize: vertical; line-height: 1.5; color: var(--text);
+}
+.runner-code { min-height: 220px; background: #fafbfc; }
+.runner-code:focus, .runner-input:focus { border-color: var(--primary); }
+.runner-input { min-height: 80px; background: #fff; }
+.runner-output {
+  background: var(--nav-bg); color: #e2e8f0; padding: 12px 14px; border-radius: 6px;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace; font-size: 13px;
+  white-space: pre-wrap; word-break: break-word;
+  min-height: 80px; max-height: 300px; overflow-y: auto; margin: 0; line-height: 1.6;
+}
+.runner-output.error { border-left: 3px solid var(--danger); }
+.runner-output.muted { color: var(--text-muted); }
+
+/* Stats */
+.stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.stat-box {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 24px; text-align: center; min-width: 120px; box-shadow: var(--shadow);
+}
+.stat-box .num { font-size: 32px; font-weight: 800; color: var(--primary); }
+.stat-box .label { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+/* Results table */
+.results-table-wrap {
+  background: var(--card); border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.results-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.results-table th { background: var(--nav-bg); color: var(--nav-text); padding: 10px 14px; text-align: left; font-size: 13px; font-weight: 600; }
+.results-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.results-table tr:hover td { background: #f8fafc; }
+.results-table .score-high { color: var(--success); font-weight: 700; }
+.results-table .score-mid { color: var(--warning); font-weight: 600; }
+.results-table .score-low { color: var(--danger); font-weight: 600; }
+.results-table a { color: var(--primary); text-decoration: none; font-weight: 500; }
+.results-table a:hover { text-decoration: underline; }
+.results-table .center { text-align: center; }
+
+/* Report viewer */
+.report-viewer {
+  display: none; background: var(--card); border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border);
+  margin-top: 20px;
+}
+.report-viewer-header {
+  background: var(--nav-bg); color: var(--nav-text); padding: 10px 16px;
+  display: flex; justify-content: space-between; align-items: center; font-size: 14px;
+}
+.report-viewer-header button { background: none; border: 1px solid rgba(255,255,255,.3); color: #fff; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.report-viewer-header button:hover { background: rgba(255,255,255,.15); }
+.report-viewer iframe { width: 100%; height: 700px; border: none; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--nav-bg); color: #fff;
+  padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 1000;
+  transform: translateY(80px); opacity: 0; transition: all .3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ============================== */
+/*  Sidebar (수행평가 목록)         */
+/* ============================== */
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - 56px);
+}
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid var(--border);
+  padding: 16px 12px;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: 100vh;
+}
+.sidebar-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 8px 8px;
+}
+.btn-new-session {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-new-session:hover { background: var(--primary-hover); }
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.session-item {
+  position: relative;
+  padding: 10px 38px 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .12s, border-color .12s;
+}
+.session-item:hover { background: var(--bg); }
+.session-item.active {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+.session-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.session-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.session-summary {
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 4px;
+  font-weight: 500;
+}
+.session-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  gap: 2px;
+}
+.session-item:hover .session-actions,
+.session-item.active .session-actions { display: flex; }
+.session-action {
+  border: none;
+  background: rgba(255,255,255,0.9);
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-light);
+  transition: background .12s, color .12s;
+}
+.session-action:hover { background: #fff; color: var(--text); }
+.session-action.danger:hover { background: var(--danger-bg); color: var(--danger); }
+.session-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .app-shell { flex-direction: column; }
+  .sidebar {
+    width: 100%;
+    max-height: none;
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+  }
+  .session-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .session-item { flex: 0 0 auto; min-width: 160px; }
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <h1>채점 대시보드 <span id="navActiveName" style="font-weight:400; opacity:.7; margin-left:8px; font-size:14px;">{% if active %}· {{ active.name }}{% endif %}</span></h1>
+  <span class="badge">Local Claude</span>
+</div>
+
+<div class="app-shell">
+
+  <!-- ============================== -->
+  <!-- 사이드바: 수행평가 목록           -->
+  <!-- ============================== -->
+  <aside class="sidebar">
+    <button class="btn-new-session" type="button" onclick="createSession()">
+      <span style="font-size:16px; line-height:1;">＋</span> 새 수행평가
+    </button>
+    <div class="sidebar-title">수행평가 목록</div>
+    <div class="session-list" id="sessionList">
+      {% if sessions %}
+        {% for s in sessions %}
+        <div class="session-item {% if active and s.id == active.id %}active{% endif %}"
+             data-id="{{ s.id }}"
+             onclick="activateSession('{{ s.id }}')">
+          <div class="session-name" title="{{ s.name }}">{{ s.name }}</div>
+          <div class="session-meta">{{ s.created_at[:10] if s.created_at else '' }}</div>
+          {% if s.score_summary %}
+          <div class="session-summary">
+            {{ s.score_summary.total }}명 · 평균 {{ s.score_summary.avg }}점
+          </div>
+          {% endif %}
+          <div class="session-actions">
+            <button class="session-action" type="button" title="이름 수정"
+                    onclick="event.stopPropagation(); renameSession('{{ s.id }}', this.closest('.session-item').querySelector('.session-name').textContent.trim());">✏️</button>
+            <button class="session-action danger" type="button" title="삭제"
+                    onclick="event.stopPropagation(); deleteSession('{{ s.id }}', this.closest('.session-item').querySelector('.session-name').textContent.trim());">🗑️</button>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="session-empty">아직 수행평가가 없습니다</div>
+      {% endif %}
+    </div>
+  </aside>
+
+  <main class="main-content">
+<div class="container">
+
+  <!-- ============================== -->
+  <!-- Hero: 결과 없을 때만 표시        -->
+  <!-- ============================== -->
+  {% if not results %}
+  <div class="hero">
+    <h2>파이썬 프로그래밍 자동 채점</h2>
+    <p>아래 파일들을 업로드한 뒤 "채점 시작"을 누르면 Claude가 자동으로 채점합니다.</p>
+  </div>
+  {% endif %}
+
+  <!-- ============================== -->
+  <!-- 파일 업로드 영역 (항상 표시)      -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="section-title">📁 파일 준비</div>
+
+    <div class="upload-grid">
+      <label class="upload-card {{ 'ready' if status.question }}" id="card-question">
+        <button type="button" class="card-clear" title="이 파일 삭제"
+                onclick="event.preventDefault(); event.stopPropagation(); resetTarget('question');">×</button>
+        <div class="card-icon">📝</div>
+        <div class="card-title">question.md</div>
+        <div class="card-desc">문제 및 테스트케이스</div>
+        <div class="card-status {{ 'ok' if status.question else 'empty' }}">
+          {{ '준비됨' if status.question else '업로드 필요' }}
+        </div>
+        <input type="file" accept=".md" onchange="uploadFile(this, 'question')">
+      </label>
+
+      <label class="upload-card {{ 'ready' if status.criteria }}" id="card-criteria">
+        <button type="button" class="card-clear" title="이 파일 삭제"
+                onclick="event.preventDefault(); event.stopPropagation(); resetTarget('criteria');">×</button>
+        <div class="card-icon">📊</div>
+        <div class="card-title">평가기준.md</div>
+        <div class="card-desc">평가 요소별 채점 기준</div>
+        <div class="card-status {{ 'ok' if status.criteria else 'empty' }}">
+          {{ '준비됨' if status.criteria else '업로드 필요' }}
+        </div>
+        <input type="file" accept=".md" onchange="uploadFile(this, 'criteria')">
+      </label>
+
+      <label class="upload-card {{ 'ready' if status.answer }}" id="card-answer">
+        <button type="button" class="card-clear" title="모범답안 폴더 삭제"
+                onclick="event.preventDefault(); event.stopPropagation(); resetTarget('answer');">×</button>
+        <div class="card-icon">✅</div>
+        <div class="card-title">모범답안</div>
+        <div class="card-desc">.py 파일 또는 zip</div>
+        <div class="card-status {{ 'ok' if status.answer else 'empty' }}">
+          {{ '%d개 파일'|format(status.answer) if status.answer else '업로드 필요' }}
+        </div>
+        <input type="file" accept=".py,.zip" onchange="uploadFile(this, 'answer')">
+      </label>
+
+      <label class="upload-card {{ 'ready' if status.data }}" id="card-data">
+        <button type="button" class="card-clear" title="학생 코드 폴더 삭제"
+                onclick="event.preventDefault(); event.stopPropagation(); resetTarget('data');">×</button>
+        <div class="card-icon">👩‍🎓</div>
+        <div class="card-title">학생 코드</div>
+        <div class="card-desc">학생 제출 코드 zip</div>
+        <div class="card-status {{ 'ok' if status.data else 'empty' }}">
+          {{ '%d명'|format(status.data) if status.data else '업로드 필요' }}
+        </div>
+        <input type="file" accept=".zip" onchange="uploadFile(this, 'data')">
+      </label>
+    </div>
+
+    <!-- 샘플 다운로드 -->
+    <div class="sample-bar">
+      <span class="label">💡 샘플 파일</span>
+      <a href="/api/sample/question" download>question.md</a>
+      <a href="/api/sample/criteria" download>평가기준.md</a>
+      <a href="/api/sample/answer" download>answer.zip</a>
+      <a href="/api/sample/data" download>data.zip</a>
+      <span class="sep">·</span>
+      <span>처음 사용하시거나 형식이 궁금하실 때 받아보세요.</span>
+    </div>
+
+    <!-- 파일 설명 가이드 -->
+    <div class="file-guide">
+      <table>
+        <thead>
+          <tr><th>파일</th><th>설명</th><th>형식</th><th>샘플 / 도움말</th></tr>
+        </thead>
+        <tbody>
+          <tr class="main-row">
+            <td class="fname">question.md</td>
+            <td class="fdesc">문제별 지시사항과 테스트케이스 (Input/Print 표)</td>
+            <td class="fformat">마크다운 (.md)</td>
+            <td><div class="actions">
+              <a class="dl-link" href="/api/sample/question" download>다운로드</a>
+              <button type="button" class="help-toggle" data-help="question" onclick="toggleHelp('question')">📖 작성 요령</button>
+            </div></td>
+          </tr>
+          <tr class="help-row" id="help-question" hidden><td colspan="4">
+            <div class="help-content">
+              <h4>📝 question.md 작성 요령</h4>
+              <div class="help-grid">
+                <div>
+                  <div class="help-label">기본 구조 (문제마다 반복)</div>
+<pre>### 문제 1
+
+> 한 줄짜리 문제 지시문
+
+- 함수 기능 : ...
+- 메인 기능 : ...
+- 테스트케이스
+
+  | Input | Print |
+  |-------|-------|
+  | 5     | 120   |
+  | 3     | 6     |
+
+---</pre>
+                </div>
+                <div>
+                  <div class="help-block">
+                    <div class="help-label">✓ 꼭 지킬 것</div>
+                    <ul class="do">
+                      <li>문제 헤더는 <code>### 문제 1</code>, <code>### 문제 2</code> ... 순서대로</li>
+                      <li>테스트케이스 표는 <strong>반드시 <code>| Input | Print |</code></strong> 컬럼명 그대로</li>
+                      <li>입력 없는 문제는 <strong>Input 칸을 비워둠</strong> (예: <code>|  | 55 |</code>)</li>
+                      <li>여러 케이스가 있으면 표에 행을 여러 줄로 추가</li>
+                    </ul>
+                  </div>
+                  <div class="help-block">
+                    <div class="help-label">✕ 자주 하는 실수</div>
+                    <ul class="dont">
+                      <li><code>### 1번</code>, <code>### 1</code> 같은 헤더 (반드시 <code>### 문제 N</code>)</li>
+                      <li>컬럼명을 한글로 바꿈 (<code>| 입력 | 출력 |</code> X)</li>
+                      <li>코드블록 안에 테스트케이스를 넣음 — 표는 일반 마크다운 표여야 함</li>
+                    </ul>
+                  </div>
+                  <div class="help-block">
+                    <div class="help-label">• 보너스 팁</div>
+                    <ul class="note">
+                      <li>학생이 어려워할 만한 개념은 <code>```help</code> 블록으로 설명을 덧붙일 수 있음</li>
+                      <li>문제 사이를 <code>---</code> 로 구분하면 가독성↑</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td></tr>
+
+          <tr class="main-row">
+            <td class="fname">평가기준.md</td>
+            <td class="fdesc">평가 요소, 만족 항목 수별 배점, 문제별 세부 기준</td>
+            <td class="fformat">마크다운 (.md)</td>
+            <td><div class="actions">
+              <a class="dl-link" href="/api/sample/criteria" download>다운로드</a>
+              <button type="button" class="help-toggle" data-help="criteria" onclick="toggleHelp('criteria')">📖 작성 요령</button>
+            </div></td>
+          </tr>
+          <tr class="help-row" id="help-criteria" hidden><td colspan="4">
+            <div class="help-content">
+              <h4>📊 평가기준.md 작성 요령</h4>
+              <div class="help-grid">
+                <div>
+                  <div class="help-label">기본 구조</div>
+<pre># 평가 기준
+
+> 후하게 채점한다 등
+> 전반적인 채점 정책을 적습니다.
+
+## 평가 요소: 함수 설계 및 구현
+> 특이사항: 문제 1 통과 시
+> 2~3은 관대하게
+
+| 만족 항목 수 | 배점 |
+|---------|----|
+| 0       | 2  |
+| 1       | 4  |
+| 2       | 6  |
+| 3       | 8  |
+
+### 문제 1
+- 함수를 정의(선언)할 수 있음
+- 정의한 함수를 호출할 수 있음
+
+### 문제 2
+- 매개변수와 인자를 활용할 수 있음
+
+## 평가 요소: 변수 활용
+| 만족 항목 수 | 배점 |
+| ...</pre>
+                </div>
+                <div>
+                  <div class="help-block">
+                    <div class="help-label">✓ 꼭 지킬 것</div>
+                    <ul class="do">
+                      <li>평가요소는 <code>## 평가 요소: 이름</code> 형식</li>
+                      <li>평가요소마다 <code>| 만족 항목 수 | 배점 |</code> 표 1개씩</li>
+                      <li><code>### 문제 N</code> 안에 평가 항목을 <strong>체크리스트(- )</strong>로 나열</li>
+                      <li>특이사항은 <code>&gt; 특이사항: ...</code> 으로 시작 — Claude가 채점에 반영</li>
+                    </ul>
+                  </div>
+                  <div class="help-block">
+                    <div class="help-label">✕ 자주 하는 실수</div>
+                    <ul class="dont">
+                      <li>평가요소 이름을 약식으로 바꿈 (예: <code>함수 설계 및 구현</code> → <code>함수 설계</code>)</li>
+                      <li>점수표만 적고 <strong>각 문제의 평가 항목을 안 적음</strong></li>
+                      <li>같은 평가요소에 표가 두 개</li>
+                    </ul>
+                  </div>
+                  <div class="highlight">
+                    💡 <strong>평가요소 이름 = 결과 표 컬럼명</strong>입니다.<br>
+                    여기 적은 글자가 그대로 채점 결과 표의 컬럼이 되니, 한 글자도 다르지 않게 통일해 주세요.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td></tr>
+
+          <tr class="main-row">
+            <td class="fname">answer/</td>
+            <td class="fdesc">문제별 모범 답안 코드 (q1.py, q2.py, ...)</td>
+            <td class="fformat">.py 파일들 또는 zip</td>
+            <td><div class="actions">
+              <a class="dl-link" href="/api/sample/answer" download>다운로드</a>
+              <button type="button" class="help-toggle" data-help="answer" onclick="toggleHelp('answer')">📖 작성 요령</button>
+            </div></td>
+          </tr>
+          <tr class="help-row" id="help-answer" hidden><td colspan="4">
+            <div class="help-content">
+              <h4>✅ 모범답안 작성 요령</h4>
+              <div class="help-grid">
+                <div>
+                  <div class="help-label">파일 구조</div>
+<pre>answer/
+├── q1.py    ← 문제 1 모범답안
+├── q2.py    ← 문제 2 모범답안
+├── ...
+└── q8.py</pre>
+                </div>
+                <div>
+                  <div class="help-block">
+                    <div class="help-label">✓ 꼭 지킬 것</div>
+                    <ul class="do">
+                      <li>파일명은 <strong><code>q1.py</code>, <code>q2.py</code></strong>... (소문자 q + 문제번호)</li>
+                      <li>학생들이 풀어야 하는 형식으로 작성 (<code>input()</code>, <code>print()</code> 사용)</li>
+                      <li>실행했을 때 테스트케이스 출력과 일치하는지 직접 한 번 돌려보기</li>
+                    </ul>
+                  </div>
+                  <div class="help-block">
+                    <div class="help-label">• 업로드 방식</div>
+                    <ul class="note">
+                      <li>여러 파일을 한꺼번에 올리려면 <code>answer.zip</code> 으로 압축해서 업로드 (zip 안 폴더 구조 자유)</li>
+                      <li>한 파일씩 추가 업로드도 가능</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td></tr>
+
+          <tr class="main-row">
+            <td class="fname">data/</td>
+            <td class="fdesc">학생별 제출 코드. 폴더명의 숫자(_1, _2, ...)가 문제 번호에 대응</td>
+            <td class="fformat">zip (학생이름(학번@dodam.hs.kr)/.../_N/Project/Main.py)</td>
+            <td><div class="actions">
+              <a class="dl-link" href="/api/sample/data" download>다운로드</a>
+              <button type="button" class="help-toggle" data-help="data" onclick="toggleHelp('data')">📖 작성 요령</button>
+            </div></td>
+          </tr>
+          <tr class="help-row" id="help-data" hidden><td colspan="4">
+            <div class="help-content">
+              <h4>👩‍🎓 학생 코드 zip 작성 요령</h4>
+              <div class="help-grid">
+                <div>
+                  <div class="help-label">zip 안 구조</div>
+<pre>data.zip
+└── 홍길동(20106@dodam.hs.kr)/
+    ├── q1/Project/Main.py
+    ├── q2/Project/Main.py
+    ├── ...
+    └── q8/Project/Main.py</pre>
+                  <div class="highlight" style="margin-top:12px">
+                    📌 <strong>도담 플랫폼에서 받은 zip을 그대로 올리면 끝</strong>입니다.<br>
+                    형식이 이미 위와 같이 되어 있어 별도 정리가 필요 없습니다.
+                  </div>
+                </div>
+                <div>
+                  <div class="help-block">
+                    <div class="help-label">✓ 폴더명 규칙</div>
+                    <ul class="do">
+                      <li>학생 폴더: <code>이름(학번@dodam.hs.kr)</code> 또는 학번만 (<code>20106</code>)</li>
+                      <li>문제 폴더: 폴더명에 숫자가 있으면 OK (<code>q1</code>, <code>_1</code>, <code>문제1</code> 등)</li>
+                      <li>학생 코드 위치: <code>&lt;문제폴더&gt;/Project/Main.py</code> (도담 형식)</li>
+                    </ul>
+                  </div>
+                  <div class="help-block">
+                    <div class="help-label">✕ 자주 하는 실수</div>
+                    <ul class="dont">
+                      <li>학생별로 zip을 따로 올림 — <strong>모든 학생을 한 zip에 묶어야</strong> 함</li>
+                      <li>맥에서 zip 만들 때 생기는 <code>__MACOSX</code> 폴더 — 자동으로 무시되니 신경 안 써도 OK</li>
+                    </ul>
+                  </div>
+                  <div class="help-block">
+                    <div class="help-label">• 미제출 처리</div>
+                    <ul class="note">
+                      <li>학생 폴더에 특정 문제 폴더가 없거나 <code>Main.py</code> 가 비어 있으면 자동으로 "미제출(0점)"</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 초기화 버튼 -->
+    <div class="reset-bar">
+      <button class="btn-reset" type="button" onclick="resetTarget('all')">
+        🗑 업로드한 파일 전체 초기화
+      </button>
+    </div>
+
+    <!-- 구글시트 URL -->
+    <div class="sheet-row">
+      <label>구글시트 <span class="optional">(선택)</span></label>
+      <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/... 점수 자동 입력용">
+    </div>
+
+    <!-- 채점 시작 버튼 -->
+    <div class="action-bar">
+      <button class="btn btn-primary" id="btnGrade" onclick="startGrade()">
+        채점 시작
+      </button>
+      <a class="btn btn-outline" id="btnOpenIndex" href="/reports/index.html" target="_blank"
+         style="{{ '' if status.index_html else 'display:none' }}">
+        📄 전체 리포트 보기
+      </a>
+      {% if results %}
+      <button class="btn btn-outline" onclick="document.getElementById('resultsSection').scrollIntoView({behavior:'smooth'})">
+        결과 표 보기
+      </button>
+      {% endif %}
+      <button class="btn-reset" id="btnResetReports" type="button" onclick="resetTarget('reports')"
+              style="margin-left:auto; {{ '' if (status.reports or status.index_html) else 'display:none' }}">
+        🗑 결과 초기화
+      </button>
+      <span id="gradeStatus" style="font-size:14px; color:var(--text-light);"></span>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- 진행 로그 (채점 시작 시 표시)    -->
+  <!-- ============================== -->
+  <div class="section">
+    <div class="progress-area" id="progressArea"></div>
+
+    <!-- 완료 시 표시되는 큰 강조 카드 -->
+    <div class="done-card" id="doneCard">
+      <div class="done-text">
+        ✅ 채점이 완료됐어요
+        <small id="doneSummary">전체 리포트에서 학생별 점수와 상세 결과를 확인하세요.</small>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn-primary" href="/reports/index.html" target="_blank">
+          전체 리포트 열기 →
+        </a>
+        <button class="btn btn-outline" onclick="document.getElementById('resultsSection').scrollIntoView({behavior:'smooth'})">
+          요약 표 보기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- 학생 코드 실행기 (data 있을 때) -->
+  <!-- ============================== -->
+  <div class="section" id="runnerSection" style="{{ '' if status.data else 'display:none' }}">
+    <hr class="divider" style="margin-top:0">
+    <div class="section-title">🧪 학생 코드 실행기</div>
+
+    <div class="runner-controls">
+      <select id="runnerStudent" class="runner-select">
+        <option value="">학생 선택...</option>
+      </select>
+      <select id="runnerProblem" class="runner-select">
+        <option value="">문제 선택...</option>
+      </select>
+      <button class="btn btn-primary" id="runnerRunBtn" onclick="runnerExecute()" style="padding:8px 22px; font-size:14px;">
+        ▶ 실행
+      </button>
+      <span id="runnerStatus" style="font-size:13px; color:var(--text-light);"></span>
+    </div>
+
+    <div class="runner-grid">
+      <div class="runner-pane">
+        <div class="runner-label">📝 학생 코드<span class="runner-hint">편집 가능 · Ctrl+Enter 로 실행</span></div>
+        <textarea id="runnerCode" class="runner-code" spellcheck="false"
+                  placeholder="학생과 문제를 선택하면 코드가 여기에 표시됩니다"></textarea>
+      </div>
+      <div class="runner-pane">
+        <div class="runner-label">⌨️ 표준입력<span class="runner-hint">선택 · 줄바꿈으로 여러 줄</span></div>
+        <textarea id="runnerInput" class="runner-input" placeholder="예) 5"></textarea>
+
+        <div class="runner-label" style="margin-top:14px">📤 실행 결과</div>
+        <pre id="runnerOutput" class="runner-output muted">실행 버튼을 누르면 결과가 여기에 표시됩니다</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== -->
+  <!-- 채점 결과 (결과 있을 때만 표시)  -->
+  <!-- ============================== -->
+  <div class="section" id="resultsSection" style="{{ '' if results else 'display:none' }}">
+    <hr class="divider" style="margin-top:0">
+    <div class="section-title">📋 채점 결과</div>
+
+    <div class="section-actions">
+      <a class="btn btn-primary" href="/reports/index.html" target="_blank">
+        📄 전체 리포트 페이지 열기
+      </a>
+      <span style="font-size:13px; color:var(--text-light); flex:1;">학생별 상세 리포트 링크와 통계는 전체 리포트 페이지에서 확인할 수 있어요.</span>
+      <button class="btn-reset" type="button" onclick="resetTarget('reports')">
+        🗑 결과 초기화
+      </button>
+    </div>
+
+    <div id="resultsContent">
+    {% if results %}
+      <div class="stats">
+        <div class="stat-box"><div class="num">{{ results.avg }}</div><div class="label">평균</div></div>
+        <div class="stat-box"><div class="num">{{ results.max }}</div><div class="label">최고점</div></div>
+        <div class="stat-box"><div class="num">{{ results.min }}</div><div class="label">최저점</div></div>
+        <div class="stat-box"><div class="num">{{ results.total }}</div><div class="label">응시자</div></div>
+      </div>
+
+      <div class="results-table-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>#</th><th>이름</th><th>학번</th>
+              {% for cat in results.cat_names %}<th class="center">{{ cat }}</th>{% endfor %}
+              <th class="center">총점</th><th class="center">리포트</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in results.students %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ s.name }}</td>
+              <td>{{ s.id }}</td>
+              {% for c in s.categories %}<td class="center">{{ c.score }}</td>{% endfor %}
+              <td class="center {% if s.score >= 30 %}score-high{% elif s.score >= 20 %}score-mid{% else %}score-low{% endif %}">
+                {{ s.score }}
+              </td>
+              <td class="center"><a href="#" onclick="openReport('{{ s.report_url }}', '{{ s.name }} ({{ s.id }})'); return false;">보기</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+    </div>
+
+    <div class="report-viewer" id="reportViewer">
+      <div class="report-viewer-header">
+        <span id="reportTitle">리포트</span>
+        <div>
+          <button onclick="openReportNewTab()">새 탭에서 열기</button>
+          <button onclick="closeReport()">닫기</button>
+        </div>
+      </div>
+      <iframe id="reportFrame" src=""></iframe>
+    </div>
+  </div>
+
+</div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========== Upload ========== */
+async function uploadFile(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('type', type);
+  fd.append('file', file);
+  try {
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(file.name + ' 업로드 완료');
+      updateCards(data.status);
+    } else {
+      showToast('오류: ' + data.error, true);
+    }
+  } catch (e) {
+    showToast('업로드 실패: ' + e.message, true);
+  }
+  input.value = '';
+}
+
+function updateCards(st) {
+  updateCard('card-question', st.question, st.question ? '준비됨' : '업로드 필요');
+  updateCard('card-criteria', st.criteria, st.criteria ? '준비됨' : '업로드 필요');
+  updateCard('card-answer', st.answer, st.answer ? st.answer + '개 파일' : '업로드 필요');
+  updateCard('card-data', st.data, st.data ? st.data + '명' : '업로드 필요');
+
+  // 코드 실행기 노출/갱신
+  const runner = document.getElementById('runnerSection');
+  if (runner) {
+    if (st.data) {
+      runner.style.display = '';
+      loadRunner();
+    } else {
+      runner.style.display = 'none';
+    }
+  }
+}
+function updateCard(id, ok, text) {
+  const card = document.getElementById(id);
+  card.classList.toggle('ready', !!ok);
+  const badge = card.querySelector('.card-status');
+  badge.className = 'card-status ' + (ok ? 'ok' : 'empty');
+  badge.textContent = text;
+}
+
+/* ========== Reset (uploaded files) ========== */
+async function resetTarget(target) {
+  const labels = {
+    question: 'question.md',
+    criteria: '평가기준.md',
+    answer:   '모범답안 폴더',
+    data:     '학생 코드 폴더',
+    reports:  '채점 리포트와 채점 중 생성된 부산물 파일',
+    all:      '업로드한 파일과 채점 결과 전체',
+  };
+  const what = labels[target] || target;
+  if (!confirm(`${what}을(를) 삭제합니다. 계속할까요?`)) return;
+
+  try {
+    const res = await fetch('/api/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showToast('초기화 실패: ' + (data.error || '알 수 없는 오류'), true);
+      return;
+    }
+    // 삭제된 항목이 reports/ 외에도 있으면 토스트에 한두 개 표시
+    const extras = (data.deleted || []).filter(d => d !== 'reports/');
+    let msg = `${what} 삭제 완료`;
+    if (target === 'reports' && extras.length > 0) {
+      const preview = extras.slice(0, 3).join(', ') + (extras.length > 3 ? ` 외 ${extras.length - 3}개` : '');
+      msg = `채점 결과 삭제 완료 (부산물: ${preview})`;
+    }
+    showToast(msg);
+    if (target === 'all' || target === 'reports') {
+      // hero / 결과 섹션 / runner 등 전체를 깔끔히 다시 그리기 위해 리로드
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      updateCards(data.status);
+    }
+  } catch (e) {
+    showToast('초기화 실패: ' + e.message, true);
+  }
+}
+
+/* ========== Grading ========== */
+let grading = false;
+let currentReportUrl = '';
+
+function startGrade() {
+  if (grading) return;
+  grading = true;
+  const btn = document.getElementById('btnGrade');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 채점 중...';
+
+  const area = document.getElementById('progressArea');
+  area.style.display = 'block';
+  area.innerHTML = '';
+
+  const sheetUrl = document.getElementById('sheetUrl').value.trim();
+  const url = '/api/grade' + (sheetUrl ? '?sheet_url=' + encodeURIComponent(sheetUrl) : '');
+
+  const es = new EventSource(url);
+  es.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    switch (data.type) {
+      case 'log':
+        addLog(data.text);
+        break;
+      case 'tool':
+        addLog('🔧 ' + data.name + (data.detail ? ' — ' + data.detail : ''), 'line-tool');
+        break;
+      case 'status':
+        addLog('ℹ️ ' + data.text, 'line-status');
+        document.getElementById('gradeStatus').textContent = data.text;
+        break;
+      case 'result_text':
+        addLog(data.text);
+        break;
+      case 'error':
+        addLog('❌ ' + data.text, 'line-error');
+        endGrade();
+        es.close();
+        break;
+      case 'complete':
+        addLog('✅ 채점 완료!', 'line-ok');
+        endGrade();
+        es.close();
+        showDoneCard(data.results);
+        if (data.results) renderResults(data.results);
+        else fetch('/api/results').then(r => r.json()).then(rs => { if (rs) renderResults(rs); });
+        break;
+    }
+  };
+  es.onerror = function() {
+    addLog('연결이 끊어졌습니다.', 'line-error');
+    endGrade();
+    es.close();
+  };
+}
+
+function endGrade() {
+  grading = false;
+  const btn = document.getElementById('btnGrade');
+  btn.disabled = false;
+  btn.innerHTML = '채점 시작';
+  document.getElementById('gradeStatus').textContent = '';
+  fetch('/api/status').then(r => r.json()).then(st => {
+    updateCards(st);
+    // 액션바의 "전체 리포트 보기" 버튼도 reports/index.html 생성 시 자동 노출
+    const link = document.getElementById('btnOpenIndex');
+    if (link) link.style.display = st.index_html ? '' : 'none';
+    // "결과 초기화" 버튼도 reports 가 있을 때만 노출
+    const resetBtn = document.getElementById('btnResetReports');
+    if (resetBtn) resetBtn.style.display = (st.reports || st.index_html) ? '' : 'none';
+  });
+}
+
+function showDoneCard(results) {
+  const card = document.getElementById('doneCard');
+  if (!card) return;
+  card.classList.add('show');
+  const sum = document.getElementById('doneSummary');
+  if (sum && results) {
+    sum.textContent = `${results.total}명 채점 · 평균 ${results.avg}점 · 최고 ${results.max}점 · 최저 ${results.min}점`;
+  }
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function addLog(text, cls) {
+  const area = document.getElementById('progressArea');
+  const div = document.createElement('div');
+  div.className = 'line' + (cls ? ' ' + cls : '');
+  div.textContent = text;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+/* ========== Results (dynamic render after grading) ========== */
+function renderResults(r) {
+  // Show results section
+  const sec = document.getElementById('resultsSection');
+  sec.style.display = '';
+
+  // Hide hero if present
+  const hero = document.querySelector('.hero');
+  if (hero) hero.style.display = 'none';
+
+  let html = `
+    <div class="stats">
+      <div class="stat-box"><div class="num">${r.avg}</div><div class="label">평균</div></div>
+      <div class="stat-box"><div class="num">${r.max}</div><div class="label">최고점</div></div>
+      <div class="stat-box"><div class="num">${r.min}</div><div class="label">최저점</div></div>
+      <div class="stat-box"><div class="num">${r.total}</div><div class="label">응시자</div></div>
+    </div>
+    <div class="results-table-wrap"><table class="results-table">
+      <thead><tr><th>#</th><th>이름</th><th>학번</th>`;
+  (r.cat_names || []).forEach(c => html += `<th class="center">${c}</th>`);
+  html += `<th class="center">총점</th><th class="center">리포트</th></tr></thead><tbody>`;
+
+  r.students.forEach((s, i) => {
+    const cls = s.score >= 30 ? 'score-high' : s.score >= 20 ? 'score-mid' : 'score-low';
+    html += `<tr><td>${i+1}</td><td>${s.name}</td><td>${s.id}</td>`;
+    (s.categories || []).forEach(c => html += `<td class="center">${c.score}</td>`);
+    html += `<td class="center ${cls}">${s.score}</td>`;
+    html += `<td class="center"><a href="#" onclick="openReport('${s.report_url}','${s.name} (${s.id})');return false;">보기</a></td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  document.getElementById('resultsContent').innerHTML = html;
+  sec.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ========== Report Viewer ========== */
+function openReport(url, title) {
+  currentReportUrl = url;
+  document.getElementById('reportViewer').style.display = 'block';
+  document.getElementById('reportTitle').textContent = title;
+  document.getElementById('reportFrame').src = url;
+  document.getElementById('reportViewer').scrollIntoView({ behavior: 'smooth' });
+}
+function closeReport() {
+  document.getElementById('reportViewer').style.display = 'none';
+  document.getElementById('reportFrame').src = '';
+}
+function openReportNewTab() {
+  if (currentReportUrl) window.open(currentReportUrl, '_blank');
+}
+
+/* ========== Code Runner ========== */
+let runnerStudents = [];
+
+async function loadRunner() {
+  const sec = document.getElementById('runnerSection');
+  if (!sec || sec.style.display === 'none') return;
+  try {
+    const res = await fetch('/api/students');
+    runnerStudents = await res.json();
+  } catch (e) {
+    runnerStudents = [];
+  }
+
+  const sSel = document.getElementById('runnerStudent');
+  const prevS = sSel.value;
+  sSel.innerHTML = '<option value="">학생 선택...</option>';
+  runnerStudents.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.label;
+    sSel.appendChild(opt);
+  });
+  if (prevS && [...sSel.options].some(o => o.value === prevS)) sSel.value = prevS;
+  runnerOnStudentChange();
+}
+
+function runnerOnStudentChange() {
+  const sid = document.getElementById('runnerStudent').value;
+  const pSel = document.getElementById('runnerProblem');
+  const codeBox = document.getElementById('runnerCode');
+  const prevP = pSel.value;
+
+  pSel.innerHTML = '<option value="">문제 선택...</option>';
+  if (!sid) {
+    codeBox.value = '';
+    codeBox.placeholder = '학생을 먼저 선택하세요';
+    return;
+  }
+  const student = runnerStudents.find(s => s.id === sid);
+  if (!student) return;
+
+  student.problems.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.num;
+    opt.textContent = `문제 ${p.num}`;
+    pSel.appendChild(opt);
+  });
+  // 이전 선택 유지 시도
+  if (prevP && [...pSel.options].some(o => o.value === prevP)) {
+    pSel.value = prevP;
+    runnerFetchCode();
+  } else {
+    codeBox.value = '';
+    codeBox.placeholder = '문제를 선택하세요';
+  }
+}
+
+async function runnerFetchCode() {
+  const sid = document.getElementById('runnerStudent').value;
+  const pnum = document.getElementById('runnerProblem').value;
+  const codeBox = document.getElementById('runnerCode');
+  const status = document.getElementById('runnerStatus');
+  if (!sid || !pnum) { codeBox.value = ''; return; }
+
+  status.textContent = '코드 불러오는 중...';
+  codeBox.value = '';
+  try {
+    const res = await fetch(`/api/student-code?id=${encodeURIComponent(sid)}&problem=${encodeURIComponent(pnum)}`);
+    const data = await res.json();
+    if (data.ok) {
+      codeBox.value = data.code || '(빈 파일)';
+      status.textContent = data.name ? `${data.name} (${data.id}) · 문제 ${data.problem}` : `${data.id} · 문제 ${data.problem}`;
+    } else {
+      codeBox.value = '';
+      codeBox.placeholder = '⚠️ ' + data.error;
+      status.textContent = '';
+    }
+  } catch (e) {
+    codeBox.placeholder = '⚠️ 로드 실패: ' + e.message;
+    status.textContent = '';
+  }
+}
+
+async function runnerExecute() {
+  const code = document.getElementById('runnerCode').value;
+  const input = document.getElementById('runnerInput').value;
+  const out = document.getElementById('runnerOutput');
+  const btn = document.getElementById('runnerRunBtn');
+
+  if (!code.trim()) {
+    showToast('실행할 코드가 없습니다', true);
+    return;
+  }
+
+  out.className = 'runner-output muted';
+  out.textContent = '⏳ 실행 중... (timeout 5초)';
+  btn.disabled = true;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span> 실행 중';
+
+  try {
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, input }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      out.className = 'runner-output';
+      out.textContent = data.output && data.output.length ? data.output : '(출력 없음)';
+    } else {
+      out.className = 'runner-output error';
+      out.textContent = '❌ ' + (data.error || '실행 실패');
+    }
+  } catch (e) {
+    out.className = 'runner-output error';
+    out.textContent = '❌ 실행 실패: ' + e.message;
+  }
+  btn.disabled = false;
+  btn.innerHTML = orig;
+}
+
+// 이벤트 바인딩 + 초기 로드
+document.addEventListener('DOMContentLoaded', () => {
+  const sSel = document.getElementById('runnerStudent');
+  const pSel = document.getElementById('runnerProblem');
+  const codeBox = document.getElementById('runnerCode');
+  if (sSel) sSel.addEventListener('change', runnerOnStudentChange);
+  if (pSel) pSel.addEventListener('change', runnerFetchCode);
+  if (codeBox) {
+    codeBox.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        runnerExecute();
+      }
+    });
+  }
+  loadRunner();
+});
+
+/* ========== File guide help (작성 요령 펼치기) ========== */
+function toggleHelp(name) {
+  const row = document.getElementById('help-' + name);
+  const btn = document.querySelector(`.help-toggle[data-help="${name}"]`);
+  if (!row || !btn) return;
+  const isOpen = !row.hidden;
+  if (isOpen) {
+    row.hidden = true;
+    row.classList.remove('open');
+    btn.classList.remove('open');
+    btn.textContent = '📖 작성 요령';
+  } else {
+    row.hidden = false;
+    row.classList.add('open');
+    btn.classList.add('open');
+    btn.textContent = '🔽 닫기';
+  }
+}
+
+/* ========== Sessions (수행평가 CRUD) ========== */
+async function createSession() {
+  try {
+    const res = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      location.reload();
+    } else {
+      showToast('생성 실패: ' + (data.error || '알 수 없음'), true);
+    }
+  } catch (e) {
+    showToast('생성 실패: ' + e.message, true);
+  }
+}
+
+async function activateSession(sid) {
+  // 이미 활성이면 무시
+  const item = document.querySelector(`.session-item[data-id="${sid}"]`);
+  if (item && item.classList.contains('active')) return;
+  try {
+    const res = await fetch(`/api/sessions/${encodeURIComponent(sid)}/activate`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      location.reload();
+    } else {
+      showToast('전환 실패: ' + (data.error || '알 수 없음'), true);
+    }
+  } catch (e) {
+    showToast('전환 실패: ' + e.message, true);
+  }
+}
+
+async function renameSession(sid, currentName) {
+  const newName = prompt('수행평가 이름을 입력하세요', currentName);
+  if (newName === null) return;          // 취소
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === currentName) return;
+  try {
+    const res = await fetch(`/api/sessions/${encodeURIComponent(sid)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      location.reload();
+    } else {
+      showToast('이름 수정 실패: ' + (data.error || '알 수 없음'), true);
+    }
+  } catch (e) {
+    showToast('이름 수정 실패: ' + e.message, true);
+  }
+}
+
+async function deleteSession(sid, name) {
+  if (!confirm(`"${name}" 수행평가를 삭제할까요?\n\n관련된 모든 파일과 채점 결과가 함께 삭제됩니다.`)) return;
+  try {
+    const res = await fetch(`/api/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      location.reload();
+    } else {
+      showToast('삭제 실패: ' + (data.error || '알 수 없음'), true);
+    }
+  } catch (e) {
+    showToast('삭제 실패: ' + e.message, true);
+  }
+}
+
+/* ========== Toast ========== */
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? 'var(--danger)' : 'var(--nav-bg)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

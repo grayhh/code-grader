@@ -1,0 +1,320 @@
+<!DOCTYPE html><html lang='ko'><head><meta charset='utf-8'>
+<title>12345 채점 리포트</title>
+
+<!--
+  ⚠️ 이 파일은 학생 HTML 리포트의 STRUCTURAL REFERENCE 입니다.
+  - 클래스명, 표 구조, code-grid 안의 <pre> 순서, "(없음)" 표시 방식,
+    runner 스크립트의 셀렉터 계약 등 모든 구조적 요소를 그대로 복제하세요.
+  - 디자인(색·여백·폰트)은 자유롭게 조정 가능하지만,
+    runner 스크립트가 의존하는 셀렉터는 절대 바꾸지 마세요:
+      .q-card, .code-grid pre, table tbody tr td:first-child em
+  - 학생 데이터(이름·학번·점수·코드·테스트 결과)만 갈아끼우면 됨.
+-->
+
+<style>
+:root { --bg:#0f172a; --surface:#1e293b; --text:#e2e8f0; --muted:#94a3b8;
+        --ok:#22c55e; --bad:#ef4444; --warn:#f59e0b; --accent:#60a5fa; }
+* { box-sizing: border-box; }
+body { margin:0; padding:32px; background:var(--bg); color:var(--text);
+        font:14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; }
+h1 { font-size:28px; margin:0 0 8px; }
+h2 { font-size:20px; margin:32px 0 12px; padding-bottom:8px; border-bottom:1px solid #334155; }
+h3 { font-size:16px; margin:18px 0 6px; color:var(--accent); }
+.muted { color:var(--muted); }
+.score { font-size:42px; font-weight:700; color:var(--accent); }
+.score-meta { font-size:14px; color:var(--muted); margin-left:8px; }
+.cat-card { background:var(--surface); border-radius:12px; padding:16px 20px;
+            margin:10px 0; border-left:4px solid var(--accent); }
+.cat-head { display:flex; justify-content:space-between; align-items:baseline; }
+.cat-name { font-weight:600; }
+.cat-score { font-size:18px; font-weight:700; color:var(--accent); }
+.items { margin:8px 0 0; padding-left:18px; }
+.items li { list-style:none; margin:2px 0; }
+.items li.ok::before  { content:"✓ "; color:var(--ok); font-weight:700; }
+.items li.bad::before { content:"✗ "; color:var(--bad); font-weight:700; }
+.q-card { background:var(--surface); border-radius:12px; padding:16px 20px; margin:14px 0; }
+.q-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.badge { padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+.badge.pass { background:rgba(34,197,94,0.15); color:var(--ok); }
+.badge.fail { background:rgba(239,68,68,0.15); color:var(--bad); }
+.badge.miss { background:rgba(148,163,184,0.15); color:var(--muted); }
+pre { background:#0b1224; padding:12px 16px; border-radius:8px; overflow-x:auto;
+      font:13px/1.5 "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace; color:#e2e8f0; }
+table { width:100%; border-collapse:collapse; margin:8px 0; }
+th, td { padding:8px 10px; text-align:left; border-bottom:1px solid #334155; }
+th { background:#0b1224; color:var(--muted); font-weight:600; font-size:12px;
+     text-transform:uppercase; letter-spacing:0.05em; }
+.tc-ok td:first-child::before  { content:"✓ "; color:var(--ok); font-weight:700; }
+.tc-bad td:first-child::before { content:"✗ "; color:var(--bad); font-weight:700; }
+.code-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:8px; }
+.code-grid h4 { margin:0 0 6px; font-size:12px; color:var(--muted);
+                text-transform:uppercase; letter-spacing:0.05em; }
+@media (max-width:900px) { .code-grid { grid-template-columns: 1fr; } }
+.summary-table tbody tr:hover { background:#172033; }
+a { color:var(--accent); text-decoration:none; }
+a:hover { text-decoration:underline; }
+
+/* Inline code runner — 글자 그대로 유지 */
+.runner-box { margin-top:14px; padding-top:12px; border-top:1px dashed #334155; }
+.runner-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap; }
+.runner-row label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+.runner-stdin {
+  flex:1; min-width:120px;
+  padding:6px 10px; border:1px solid #334155; border-radius:6px;
+  background:#0b1224; color:var(--text); font-family:'JetBrains Mono','SF Mono',Monaco,Consolas,monospace; font-size:13px;
+}
+.runner-stdin:focus { outline:none; border-color:var(--accent); }
+.runner-btn {
+  padding:6px 14px; border:none; border-radius:6px;
+  background:var(--accent); color:#0f172a; font-weight:700; cursor:pointer; font-size:13px;
+}
+.runner-btn:hover    { background:#93c5fd; }
+.runner-btn:disabled { opacity:0.5; cursor:wait; }
+.runner-status { font-size:12px; color:var(--muted); }
+.runner-out {
+  background:#0b1224; padding:10px 14px; border-radius:6px;
+  font-family:'JetBrains Mono','SF Mono',Monaco,Consolas,monospace; font-size:13px;
+  color:var(--text); white-space:pre-wrap; word-break:break-word;
+  margin:0; min-height:34px; line-height:1.6;
+}
+.runner-out.muted { color:var(--muted); }
+.runner-out.err   { border-left:3px solid var(--bad); }
+</style>
+
+</head><body>
+
+<!-- ============================================================
+     1) 헤더 (이름이 있으면 "이름 (학번) 채점 리포트", 없으면 "학번 ...")
+     ============================================================ -->
+<p><a href='index.html'>← 인덱스로</a></p>
+<h1>학번 12345 채점 리포트</h1>
+<div><span class='score'>25</span><span class='score-meta'>/ 33 점</span></div>
+
+<!-- ============================================================
+     2) 평가요소별 점수 카드 (평가기준.md의 평가요소 순서/이름 그대로)
+     ============================================================ -->
+<h2>평가요소별 점수</h2>
+
+<!-- 만점 카테고리 예시 -->
+<div class='cat-card'>
+  <div class='cat-head'>
+    <span class='cat-name'>함수 설계 및 구현 <span class='muted'>(만족 4/4)</span></span>
+    <span class='cat-score'>10 / 10</span>
+  </div>
+  <ul class='items'>
+    <li class='ok'>문제1: 함수 정의</li>
+    <li class='ok'>문제1: 함수 호출</li>
+    <li class='ok'>문제2: 매개변수/인자 활용</li>
+    <li class='ok'>문제3: 반환값 활용</li>
+  </ul>
+</div>
+
+<!-- 일부 충족 카테고리 -->
+<div class='cat-card'>
+  <div class='cat-head'>
+    <span class='cat-name'>변수 활용 <span class='muted'>(만족 1/2)</span></span>
+    <span class='cat-score'>4 / 6</span>
+  </div>
+  <ul class='items'>
+    <li class='ok'>문제4: 지역변수 적용 범위 이해</li>
+    <li class='bad'>문제5: 전역변수 적용 범위 이해</li>
+  </ul>
+</div>
+
+<!-- 저점 카테고리 -->
+<div class='cat-card'>
+  <div class='cat-head'>
+    <span class='cat-name'>재귀 알고리즘의 설계 <span class='muted'>(만족 2/4)</span></span>
+    <span class='cat-score'>6 / 10</span>
+  </div>
+  <ul class='items'>
+    <li class='ok'>종료 조건 정확히 설정</li>
+    <li class='ok'>자기 자신 호출</li>
+    <li class='bad'>인자 값이 종료 조건에 가까워지도록 변화</li>
+    <li class='bad'>재귀호출 결과값을 최종 결과 도출에 활용</li>
+  </ul>
+</div>
+
+<!-- 거의 0점 카테고리 -->
+<div class='cat-card'>
+  <div class='cat-head'>
+    <span class='cat-name'>구조 비교 및 변환 <span class='muted'>(만족 1/2)</span></span>
+    <span class='cat-score'>5 / 7</span>
+  </div>
+  <ul class='items'>
+    <li class='ok'>문제7: 재귀로 동일 문제 구현</li>
+    <li class='bad'>문제8: 반복으로 동일 문제 구현</li>
+  </ul>
+</div>
+
+<!-- ============================================================
+     3) 문제별 결과
+     - 카드는 .q-card 클래스
+     - 표 컬럼 순서: 입력 / 기대 / 실제
+     - 입력 없음: <em class=muted>(없음)</em>
+     - 학생 코드: .code-grid 의 첫 번째 <pre>
+     - 모범 답안: .code-grid 의 두 번째 <pre>
+     - 미제출: q-head + badge.miss 만 있고 .code-grid 없음
+     ============================================================ -->
+<h2>문제별 결과</h2>
+
+<!-- 변형 A: 입력 없음 + 모든 테스트 통과 -->
+<div class='q-card'>
+  <div class='q-head'>
+    <h3 style='margin:0'>문제 1</h3>
+    <span class='badge pass'>모든 테스트 통과</span>
+  </div>
+  <table>
+    <thead><tr><th>입력</th><th>기대</th><th>실제</th></tr></thead>
+    <tbody>
+      <tr class='tc-ok'>
+        <td><em class=muted>(없음)</em></td>
+        <td>대한</td>
+        <td><pre style='margin:0'>대한</pre></td>
+      </tr>
+    </tbody>
+  </table>
+  <h4 class='muted' style='margin:10px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em'>코드 분석 항목</h4>
+  <ul class='items'>
+    <li class='ok'>함수 정의</li>
+    <li class='ok'>함수 호출</li>
+    <li class='ok'>'대한' 출력</li>
+  </ul>
+  <div class='code-grid'>
+    <div><h4>학생 코드</h4><pre>def f():
+    print("대한")
+
+f()</pre></div>
+    <div><h4>모범 답안</h4><pre>def print_str():
+    print('대한')
+
+print_str()</pre></div>
+  </div>
+</div>
+
+<!-- 변형 B: 입력 있음 + 일부 테스트 실패 -->
+<div class='q-card'>
+  <div class='q-head'>
+    <h3 style='margin:0'>문제 4</h3>
+    <span class='badge fail'>테스트 실패/일부 실패</span>
+  </div>
+  <table>
+    <thead><tr><th>입력</th><th>기대</th><th>실제</th></tr></thead>
+    <tbody>
+      <tr class='tc-ok'><td>2</td><td>12.56</td><td><pre style='margin:0'>12.56</pre></td></tr>
+      <tr class='tc-ok'><td>10</td><td>314</td><td><pre style='margin:0'>314.0</pre></td></tr>
+      <tr class='tc-bad'><td>5</td><td>78.5</td><td><pre style='margin:0'>9812.5</pre></td></tr>
+    </tbody>
+  </table>
+  <h4 class='muted' style='margin:10px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:0.05em'>코드 분석 항목</h4>
+  <ul class='items'>
+    <li class='ok'>함수 정의</li>
+    <li class='ok'>지역변수/매개변수 사용</li>
+    <li class='ok'>input 입력</li>
+    <li class='bad'>식이 r**2 가 아니라 r**r 로 작성됨</li>
+  </ul>
+  <div class='code-grid'>
+    <div><h4>학생 코드</h4><pre>def circle():
+    a = 3.14 * r ** r
+    return a
+
+r = float(input())
+print(circle())</pre></div>
+    <div><h4>모범 답안</h4><pre>def circle():
+    result = 3.14 * r ** 2
+    return result
+
+r = float(input())
+area = circle()
+print(area)</pre></div>
+  </div>
+</div>
+
+<!-- 변형 C: 미제출 -->
+<div class='q-card'>
+  <div class='q-head'>
+    <h3 style='margin:0'>문제 8</h3>
+    <span class='badge miss'>미제출</span>
+  </div>
+</div>
+
+<!-- ============================================================
+     4) 총평 / 격려 메시지
+     ============================================================ -->
+<p class='muted'>※ 자동 채점이며 평가기준의 '관대한 채점' 원칙이 반영되었습니다.</p>
+
+<!-- ============================================================
+     5) 학생 코드 실행 컨트롤 (필수, 모든 리포트에 동일하게)
+        한 글자도 바꾸지 말 것 — runner-* 셀렉터와 /api/run 형식이 계약점.
+     ============================================================ -->
+<script>
+/* 각 문제 카드에 "실행" 버튼을 동적으로 주입.
+   첫 테스트케이스 입력값을 표준입력 박스에 자동 채움.  */
+(function () {
+  const cards = document.querySelectorAll('.q-card');
+  cards.forEach((card) => {
+    const codeBlocks = card.querySelectorAll('.code-grid pre');
+    if (codeBlocks.length === 0) return;          // 미제출 카드 skip
+    const studentPre = codeBlocks[0];
+
+    // 첫 테스트케이스 입력 자동 채우기 (입력 없음이면 빈 문자열)
+    let firstInput = '';
+    const firstCell = card.querySelector('table tbody tr td:first-child');
+    if (firstCell && !firstCell.querySelector('em')) {
+      firstInput = (firstCell.textContent || '').trim();
+    }
+
+    const box = document.createElement('div');
+    box.className = 'runner-box';
+    box.innerHTML = `
+      <div class="runner-row">
+        <label>표준입력</label>
+        <input type="text" class="runner-stdin" placeholder="(없음)">
+        <button class="runner-btn" type="button">▶ 학생 코드 실행</button>
+        <span class="runner-status"></span>
+      </div>
+      <pre class="runner-out muted">실행 버튼을 누르면 결과가 표시됩니다 · Ctrl/⌘+Enter 단축키 지원</pre>
+    `;
+    card.appendChild(box);
+
+    const btn      = box.querySelector('.runner-btn');
+    const stdinIn  = box.querySelector('.runner-stdin');
+    const out      = box.querySelector('.runner-out');
+    const status   = box.querySelector('.runner-status');
+    stdinIn.value  = firstInput;
+
+    async function run() {
+      btn.disabled = true;
+      status.textContent = '실행 중...';
+      out.className = 'runner-out muted';
+      out.textContent = '⏳';
+      try {
+        const res = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: studentPre.textContent, input: stdinIn.value }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          out.className = 'runner-out';
+          out.textContent = data.output && data.output.length ? data.output : '(출력 없음)';
+        } else {
+          out.className = 'runner-out err';
+          out.textContent = '❌ ' + (data.error || '실행 실패');
+        }
+      } catch (e) {
+        out.className = 'runner-out err';
+        out.textContent = '❌ 실행 실패: ' + e.message;
+      }
+      btn.disabled = false;
+      status.textContent = '';
+    }
+
+    btn.addEventListener('click', run);
+    stdinIn.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
+    });
+  });
+})();
+</script>
+</body></html>
