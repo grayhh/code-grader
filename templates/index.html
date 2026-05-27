@@ -61,7 +61,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   font-size: 14px; line-height: 1; cursor: pointer; opacity: 0;
   transition: opacity .15s, background .15s;
   display: flex; align-items: center; justify-content: center;
+  pointer-events: none;   /* 숨겨진 상태에서 카드 클릭(업로드)을 가로채지 않도록 */
 }
+.upload-card.ready .card-clear { pointer-events: auto; }
 .upload-card.ready:hover .card-clear { opacity: 1; }
 .upload-card .card-clear:hover { background: var(--danger); color: #fff; }
 
@@ -506,6 +508,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
     <div class="upload-grid">
       <label class="upload-card {{ 'ready' if status.question }}" id="card-question">
+        <input type="file" accept=".md" onchange="uploadFile(this, 'question')">
         <button type="button" class="card-clear" title="이 파일 삭제"
                 onclick="event.preventDefault(); event.stopPropagation(); resetTarget('question');">×</button>
         <div class="card-icon">📝</div>
@@ -514,10 +517,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="card-status {{ 'ok' if status.question else 'empty' }}">
           {{ '준비됨' if status.question else '업로드 필요' }}
         </div>
-        <input type="file" accept=".md" onchange="uploadFile(this, 'question')">
       </label>
 
       <label class="upload-card {{ 'ready' if status.criteria }}" id="card-criteria">
+        <input type="file" accept=".md" onchange="uploadFile(this, 'criteria')">
         <button type="button" class="card-clear" title="이 파일 삭제"
                 onclick="event.preventDefault(); event.stopPropagation(); resetTarget('criteria');">×</button>
         <div class="card-icon">📊</div>
@@ -526,10 +529,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="card-status {{ 'ok' if status.criteria else 'empty' }}">
           {{ '준비됨' if status.criteria else '업로드 필요' }}
         </div>
-        <input type="file" accept=".md" onchange="uploadFile(this, 'criteria')">
       </label>
 
       <label class="upload-card {{ 'ready' if status.answer }}" id="card-answer">
+        <input type="file" accept=".py,.zip" onchange="uploadFile(this, 'answer')">
         <button type="button" class="card-clear" title="모범답안 폴더 삭제"
                 onclick="event.preventDefault(); event.stopPropagation(); resetTarget('answer');">×</button>
         <div class="card-icon">✅</div>
@@ -538,10 +541,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="card-status {{ 'ok' if status.answer else 'empty' }}">
           {{ '%d개 파일'|format(status.answer) if status.answer else '업로드 필요' }}
         </div>
-        <input type="file" accept=".py,.zip" onchange="uploadFile(this, 'answer')">
       </label>
 
       <label class="upload-card {{ 'ready' if status.data }}" id="card-data">
+        <input type="file" accept=".zip" onchange="uploadFile(this, 'data')">
         <button type="button" class="card-clear" title="학생 코드 폴더 삭제"
                 onclick="event.preventDefault(); event.stopPropagation(); resetTarget('data');">×</button>
         <div class="card-icon">👩‍🎓</div>
@@ -550,7 +553,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="card-status {{ 'ok' if status.data else 'empty' }}">
           {{ '%d명'|format(status.data) if status.data else '업로드 필요' }}
         </div>
-        <input type="file" accept=".zip" onchange="uploadFile(this, 'data')">
       </label>
     </div>
 
